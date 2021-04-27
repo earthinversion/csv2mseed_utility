@@ -13,7 +13,7 @@ conda install -c conda-forge obspy pandas
 ### Using venv
 ```
 python -m venv venv
-source phidgetplay/bin/activate
+source venv/bin/activate
 pip install obspy pandas
 ```
 
