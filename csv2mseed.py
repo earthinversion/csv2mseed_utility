@@ -27,7 +27,7 @@ days_to_seconds = 60 * 60 * 24
 channels = ['BNX', 'BNY', 'BNZ']
 
 chunksize = 10 ** 6
-def _read_csv_as_np_array(csvfile, interval=20, demean=False):
+def _read_csv_as_np_array(csvfile, interval=20):
 
     x_array = np.array([],dtype=np.float64)
     y_array = np.array([],dtype=np.float64)
@@ -48,14 +48,10 @@ def _read_csv_as_np_array(csvfile, interval=20, demean=False):
         z_array = np.append(z_array, df['Z'].values)
         count+=1
 
-    if demean:
-        x_array = x_array - np.mean(x_array)
-        y_array = y_array - np.mean(y_array)
-        z_array = z_array - np.mean(z_array)
 
     return (datetime_array, x_array, y_array, z_array), starttime.to_datetime64()
     
-def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = 50):
+def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = 50, demean=False):
     
     starttimestr = np.datetime_as_string(starttime)
     stats = {}
@@ -90,20 +86,21 @@ def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, 
                         
         stream_to_write = Stream(traces=[trace_to_write])
         stream_to_write.interpolate(sampling_rate=sample_rate, starttime=stats['starttime'], npts=npts)
+        if demean:
+            stream_to_write[0].detrend("spline", order=3, dspline=500)
         
         stream_to_write.write(f"{network}-{station}-{channels[ii]}.mseed", format='MSEED', byteorder='>', reclen=4096)
 
 def _plot_mseed(network, station, unit="Gal"):
+    sys.stdout.write(f"Plotting files: {args.network}-{args.station}-BN?.mseed\n")
     fig, ax = plt.subplots(3, 1, figsize=(10, 6), sharex=True)
     network = 'TW'
-    count = 0
     colors= ['r', 'g', 'b']
     for ii in range(3):
         sttmp = read(f"{network}-{station}-{channels[ii]}.mseed")
         sttmp[0].data = sttmp[0].data/10**6
         ax[ii].plot(sttmp[0].times("matplotlib"), sttmp[0].data, color= colors[ii], lw=0.5, label=f"{network}-{station}-{channels[ii]}")
         ax[ii].set_ylabel(channels[ii]+f" in {unit}")
-        count+=1
 
     hfmt = dates.DateFormatter('%m/%d %H:%M')
     for axx in ax:
@@ -125,7 +122,7 @@ def main(args):
             sys.stdout.write(f"Reading file {csvfile} in chunks...\n")
             try:
                 interval =  1/args.sample_rate*1000
-                (datetime_array, x_array, y_array, z_array), starttime =_read_csv_as_np_array(csvfile, interval=interval, demean=args.demean)
+                (datetime_array, x_array, y_array, z_array), starttime =_read_csv_as_np_array(csvfile, interval=interval)
 
                 ## convert to gal or keep in g
                 if args.gal:
@@ -137,7 +134,7 @@ def main(args):
 
                 z_array, x_array, y_array = z_array* GalFactor, x_array* GalFactor, y_array* GalFactor #convert from g to Gal
                         
-                _write_mseed(args.network, args.station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = args.sample_rate)
+                _write_mseed(args.network, args.station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = args.sample_rate, demean=args.demean)
 
                 sys.stdout.write(f"Finished writing file {args.network}-{args.station}-BNX.mseed\n")
                 sys.stdout.write(f"Finished writing file {args.network}-{args.station}-BNY.mseed\n")

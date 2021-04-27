@@ -1,6 +1,22 @@
 # Python utility program to write mseed file from csv
 Utpal Kumar, 2021/04
 
+## Installation
+
+### Using Anaconda/Miniconda
+```
+conda create -n rfidgetenv
+conda activate rfidgetenv
+conda install -c conda-forge obspy pandas
+```
+
+### Using venv
+```
+python -m venv venv
+source phidgetplay/bin/activate
+pip install obspy pandas
+```
+
 ## Usage
 type `python csv2mseed.py -h`
 
@@ -27,8 +43,16 @@ csv file format: 'Datetime', 'X', 'Y', 'Z' (2021-04-17 00:00:00.005829,0.00824,-
 ```
 
 - Convert to mseed, remove mean and plot
-```
-python csv2mseed.py -inp "RCEC7B/phidgetData_0009.csv" -p -dm
+```bash
+python csv2mseed.py -inp "RCEC7B/phidgetData_0009.csv" -p -dm -stn RCEC7B
 ```
 
-![RFidget Plot](docs/RFidget-plot-TW-XYZ.png)
+```
+Reading file /mnt/d/csv2mseed_utility/RCEC7B/phidgetData_0009.csv in chunks...
+Finished writing file TW-RCEC7B-BNX.mseed
+Finished writing file TW-RCEC7B-BNY.mseed
+Finished writing file TW-RCEC7B-BNZ.mseed... with sampling rate: 50 Hz
+```
+
+![RFidget Plot](docs/RFidget-plot-TW-RCEC7B.png)
+
