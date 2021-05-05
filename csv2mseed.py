@@ -39,6 +39,7 @@ def _read_csv_as_np_array(csvfile, interval=20):
         df["Datetime"] = pd.to_datetime(df["Datetime"])
         if count==0:
             starttime = df.loc[0,"Datetime"]
+        
         df.set_index("Datetime", inplace=True)
         df = df.resample(str(interval)+"ms").last().interpolate(method="nearest")
 
@@ -46,13 +47,21 @@ def _read_csv_as_np_array(csvfile, interval=20):
         x_array = np.append(x_array, df['X'].values)
         y_array = np.append(y_array, df['Y'].values)
         z_array = np.append(z_array, df['Z'].values)
+        
         count+=1
 
+    # endtime = df.loc[-1,"Datetime"]
+    # sys.stdout.write("\n")
+    # print(starttime.to_datetime64(), endtime.to_datetime64())
 
     return (datetime_array, x_array, y_array, z_array), starttime.to_datetime64()
     
 def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = 50, demean=False):
-    
+
+    timediff = datetime_array[-1]-datetime_array[0]
+    # print(int(timediff)/10**9)
+    # print(np.timedelta64(timediff, 's'))
+    num_seconds = int(timediff)/10**9
     starttimestr = np.datetime_as_string(starttime)
     stats = {}
     stats['network'] = network
@@ -62,12 +71,14 @@ def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, 
 
 
     stats['sampling_rate'] = sample_rate
-    npts = days_to_seconds * sample_rate
+    npts = int(num_seconds * sample_rate)
 
-    ## randomly generate indexes to use
-    if not npts==datetime_array.shape[0]:
+    ## resample indexes to use
+    if npts<datetime_array.shape[0]:
         random_idxs = np.arange(0, npts+1)
         datetime_array, z_array, x_array, y_array = datetime_array[random_idxs], z_array[random_idxs], x_array[random_idxs], y_array[random_idxs] #resample
+    elif npts>datetime_array.shape[0]:
+        return
     
     stats['location'] = '00'
     
@@ -147,7 +158,7 @@ def main(args):
                 sys.stdout.write(str(err))
 
         else:
-            sys.stdout.write(f"No file found: {csvfile}")
+            sys.stdout.write(f"No file found: {csvfile}\n")
 
 
 
