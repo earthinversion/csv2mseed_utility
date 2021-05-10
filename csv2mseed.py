@@ -38,6 +38,7 @@ def _read_csv_as_np_array(csvfile, interval=20):
                         'Datetime', "X", "Y", "Z"], dtype={"Datetime": "str", "X": np.float64,"Y": np.float64,"Z": np.float64}):
         df["Datetime"] = pd.to_datetime(df["Datetime"])
         if count==0:
+            # print("first line from csv file: ", df.head(1).to_string(header=False,index_names=False))
             starttime = df.loc[0,"Datetime"]
         
         df.set_index("Datetime", inplace=True)
@@ -50,9 +51,7 @@ def _read_csv_as_np_array(csvfile, interval=20):
         
         count+=1
 
-    # endtime = df.loc[-1,"Datetime"]
-    # sys.stdout.write("\n")
-    # print(starttime.to_datetime64(), endtime.to_datetime64())
+    # print("last line from csv file: ", df.tail(1).to_string(header=False,index_names=False))
 
     return (datetime_array, x_array, y_array, z_array), starttime.to_datetime64()
     
@@ -62,16 +61,30 @@ def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, 
     # print(int(timediff)/10**9)
     # print(np.timedelta64(timediff, 's'))
     num_seconds = int(timediff)/10**9
-    starttimestr = np.datetime_as_string(starttime)
+    starttimediff = int(starttime-datetime_array[0])/10**9 #nanosecond to second
     stats = {}
     stats['network'] = network
     stats['station'] = station
     # sys.stdout.write(starttime)
-    stats['starttime'] = UTCDateTime(starttimestr)
+    # print('starttime ->',starttime, starttimestr, datetime_array[0], datetime_array[1])
 
 
     stats['sampling_rate'] = sample_rate
-    npts = int(num_seconds * sample_rate)
+    # starttimediff1 = np.abs(int(datetime_array[1]-starttime)/10**9) #nanosecond to second
+    halfSamplingRate = (1/sample_rate)/2
+    dtSamplingRate = halfSamplingRate*0.15 #5 percent of half sampling 
+    # print('starttimediff: ',starttimediff, halfSamplingRate, halfSamplingRate - dtSamplingRate < np.abs(starttimediff), halfSamplingRate - dtSamplingRate, halfSamplingRate + dtSamplingRate)
+    if halfSamplingRate - dtSamplingRate < np.abs(starttimediff)  :
+        # print(f"using 1 {datetime_array[1]}")
+        starttimestr = np.datetime_as_string(datetime_array[1])
+        stats['starttime'] = UTCDateTime(starttimestr)
+        npts = int(num_seconds * sample_rate)
+    else:
+        # print(f"using 0 {datetime_array[0]}")
+        starttimestr = np.datetime_as_string(datetime_array[0])
+        stats['starttime'] = UTCDateTime(starttimestr)
+        npts = int(num_seconds * sample_rate) + 1
+    # print(f"datetime_array_end: {datetime_array[-1]}, starttimeOrig: {starttime}, starttimeMseed: {starttimestr}")
 
     ## resample indexes to use
     if npts<datetime_array.shape[0]:
@@ -101,6 +114,7 @@ def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, 
             stream_to_write[0].detrend("spline", order=3, dspline=500)
         
         stream_to_write.write(f"{network}-{station}-{channels[ii]}.mseed", format='MSEED', byteorder='>', reclen=4096)
+    # print(stream_to_write)
 
 def _plot_mseed(network, station, unit="Gal"):
     sys.stdout.write(f"Plotting files: {args.network}-{args.station}-BN?.mseed\n")
