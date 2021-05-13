@@ -1,9 +1,9 @@
+#!/home/utpal/miniconda3/envs/dispersion/bin/python
 """
 Utpal Kumar, 2021/04
 Python utility program to write mseed file from csv
 """
 import sys, os
-from datetime import datetime
 import numpy as np
 import pandas as pd
 import argparse
@@ -20,8 +20,7 @@ Python utility program to write mseed file from csv based on Pandas, Numpy and O
 
 PARSER = argparse.ArgumentParser(description=info_string, epilog="csv file format: 'Datetime', 'X', 'Y', 'Z' (2021-04-17 00:00:00.005829,0.00824,-0.01095,1.00362)")
 
-# Conversion factors
-GalFactor = 980.665
+
 days_to_seconds = 60 * 60 * 24
 
 channels = ['BNX', 'BNY', 'BNZ']
@@ -55,7 +54,7 @@ def _read_csv_as_np_array(csvfile, interval=20):
 
     return (datetime_array, x_array, y_array, z_array), starttime.to_datetime64()
     
-def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = 50, demean=False):
+def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = 50, demean=False, basepath=""):
 
     timediff = datetime_array[-1]-datetime_array[0]
     # print(int(timediff)/10**9)
@@ -113,10 +112,10 @@ def _write_mseed(network, station, starttime, datetime_array, z_array, x_array, 
         if demean:
             stream_to_write[0].detrend("spline", order=3, dspline=500)
         
-        stream_to_write.write(f"{network}-{station}-{channels[ii]}.mseed", format='MSEED', byteorder='>', reclen=4096)
+        stream_to_write.write(os.path.join(basepath,f"{network}-{station}-{channels[ii]}.mseed"), format='MSEED', byteorder='>', reclen=4096)
     # print(stream_to_write)
 
-def _plot_mseed(network, station, unit="Gal"):
+def _plot_mseed(network, station, unit="Gal", basepath=""):
     sys.stdout.write(f"Plotting files: {args.network}-{args.station}-BN?.mseed\n")
     fig, ax = plt.subplots(3, 1, figsize=(10, 6), sharex=True)
     network = 'TW'
@@ -136,30 +135,34 @@ def _plot_mseed(network, station, unit="Gal"):
     
     ax[2].set_xlabel("Time")
     fig.autofmt_xdate()
-    plt.savefig(f'RFidget-plot-{network}-{station}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(basepath,f'RFidget-plot-{network}-{station}.png'), bbox_inches='tight', dpi=300)
     plt.close('all')
 
 def main(args):
     if args.input:
         
         csvfile = os.path.abspath(args.input)
+        basepath = os.path.dirname(csvfile)
         if os.path.exists(csvfile):
-            sys.stdout.write(f"Reading file {csvfile} in chunks...\n")
+            sys.stdout.write(f"Reading file {os.path.basename(csvfile)} in chunks...\n")
             try:
                 interval =  1/args.sample_rate*1000
                 (datetime_array, x_array, y_array, z_array), starttime =_read_csv_as_np_array(csvfile, interval=interval)
 
                 ## convert to gal or keep in g
                 if args.gal:
+                    # Conversion factors
                     GalFactor = 980.665
+                    sys.stdout.write(f"Data values will be multiplied by {GalFactor} to obtain values in Gal\n")
                     outunit = "Gal"
                 else:
                     GalFactor = 1
+                    sys.stdout.write(f"Data values will be multiplied by {GalFactor} to obtain values in g\n")
                     outunit = "g"
 
                 z_array, x_array, y_array = z_array* GalFactor, x_array* GalFactor, y_array* GalFactor #convert from g to Gal
                         
-                _write_mseed(args.network, args.station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = args.sample_rate, demean=args.demean)
+                _write_mseed(args.network, args.station, starttime, datetime_array, z_array, x_array, y_array, sample_rate = args.sample_rate, demean=args.demean, basepath=basepath)
 
                 sys.stdout.write(f"Finished writing file {args.network}-{args.station}-BNX.mseed\n")
                 sys.stdout.write(f"Finished writing file {args.network}-{args.station}-BNY.mseed\n")
@@ -167,13 +170,12 @@ def main(args):
                 sys.stdout.write(f"... with sampling rate: {args.sample_rate} Hz\n")
 
                 if args.plot_data:
-                    _plot_mseed(args.network, args.station, unit=outunit)
+                    _plot_mseed(args.network, args.station, unit=outunit, basepath=basepath)
             except Exception as err:
                 sys.stdout.write(str(err))
 
         else:
             sys.stdout.write(f"No file found: {csvfile}\n")
-
 
 
 if __name__ == '__main__':
