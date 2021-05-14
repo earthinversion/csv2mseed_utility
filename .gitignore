@@ -2,4 +2,3 @@ RCEC7B/*
 *.mseed
 test.txt
 __pycache__/csv2mseed.cpython-38.pyc
-csvs2mseed.py
