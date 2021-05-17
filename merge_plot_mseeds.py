@@ -171,7 +171,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    PARSER.add_argument("-inp",'--inputs', nargs='+', type=str, help="input CSV files to convert to mseed, e.g. network_station_data.csv", required=True)
+    PARSER.add_argument("-inp",'--inputs', nargs='+', type=str, help="input mseeds, e.g. network_station_data.mseed", required=True)
     PARSER.add_argument("-stn",'--station', type=str, default="XYZ", help="station name, e.g. XYZ")
     PARSER.add_argument("-net", '--network', type=str, default="TW", help="network name, e.g. TW")
     PARSER.add_argument("-m", '--merge_data', help="merge the list of mseed files", action='store_true')
