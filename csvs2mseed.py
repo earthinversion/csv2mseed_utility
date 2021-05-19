@@ -193,9 +193,12 @@ def main(args):
                             starttime1 = starttime0
                         else:
                             starttime1 = starttime
+                        arr_len = len(datetime_array)
+                        endtime1 = datetime_array[arr_len-1]
+                        suffix_str=np.datetime_as_string(starttime1,unit='ms') + "_" + np.datetime_as_string(endtime1,unit='ms')
 
                         # print(starttime, starttime1)
-                        mseedX, mseedY, mseedZ = _write_mseed(args.network, args.station, starttime1, datetime_array, z_array, x_array, y_array, sample_rate = args.sample_rate, demean=args.demean, suffix=str(filecount), GalFactor=GalFactor)
+                        mseedX, mseedY, mseedZ = _write_mseed(args.network, args.station, starttime1, datetime_array, z_array, x_array, y_array, sample_rate = args.sample_rate, demean=args.demean, suffix=suffix_str, GalFactor=GalFactor)
                     
                 else:
                     sys.stdout.write(f"No file found: {csvfile}\n")
